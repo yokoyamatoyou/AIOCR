@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import base64
 import cv2
-from openai import OpenAI
+import openai
 from .core.config import settings
 
 class BaseOCR(ABC):
@@ -28,7 +28,7 @@ class DummyOCR(BaseOCR):
 class GPT4oMiniVisionOCR(BaseOCR):
     """GPT-4o mini を利用したOCRエンジン"""
     def __init__(self):
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
     def run(self, image: np.ndarray) -> tuple[str, float]:
         # 画像をBase64にエンコード
