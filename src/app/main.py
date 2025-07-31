@@ -36,6 +36,9 @@ if uploaded_image is not None and uploaded_yaml is not None:
 
             # 3. アップロードされたrois.yamlを読み込む
             rois = yaml.safe_load(uploaded_yaml)
+            yaml_path = os.path.join(workspace_dir, "rois.yaml")
+            with open(yaml_path, "w", encoding="utf-8") as f:
+                yaml.safe_dump(rois, f, allow_unicode=True)
 
             # 4. 画像を読み込み、傾き補正を行う
             file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
@@ -61,7 +64,7 @@ if uploaded_image is not None and uploaded_yaml is not None:
             else:
                 ocr_engine = DummyOCR()
             
-            processor = OCRProcessor(ocr_engine, workspace_dir)
+            processor = OCRProcessor(ocr_engine, workspace_dir, rois=rois)
             ocr_results = processor.process_all()
 
         # 7. 処理完了メッセージと結果を表示
