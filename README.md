@@ -11,7 +11,7 @@ AIOCR is a small sample project demonstrating a Streamlit based OCR workflow. Th
    poetry install
    ```
    Alternatively you can install the packages directly with `pip` using the information in `pyproject.toml`.
-3. **Optional `.env`**: create a file named `.env` in the project root to supply environment variables such as `OPENAI_API_KEY` used by the application.
+3. **Environment variables**: copy `.env.example` to `.env` and update values such as `OPENAI_API_KEY` used by the application.
 
 ## Running the application
 
