@@ -6,9 +6,15 @@ import cv2
 import numpy as np
 from datetime import datetime
 from typing import List, Dict
-from . import preprocess
-from .ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
-from .ocr_processor import OCRProcessor
+
+import sys
+
+# Ensure src directory is on the import path when executed directly
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from app import preprocess
+from app.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
+from app.ocr_processor import OCRProcessor
 
 # テンプレート名と検出キーワードの対応表
 TEMPLATE_KEYWORDS: Dict[str, List[str]] = {
