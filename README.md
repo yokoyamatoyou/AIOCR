@@ -20,6 +20,7 @@ Start the Streamlit interface with:
 ```bash
 streamlit run src/app/main.py
 ```
+On Windows you can run `run.bat` which executes the same command.
 
 This will launch a local web server where you can upload an image and a YAML file that defines the ROIs.
 
