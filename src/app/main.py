@@ -5,10 +5,15 @@ import yaml
 import cv2
 import numpy as np
 from datetime import datetime
-from typing import List
+from typing import List, Dict
 from . import preprocess
 from .ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
 from .ocr_processor import OCRProcessor
+
+# テンプレート名と検出キーワードの対応表
+TEMPLATE_KEYWORDS: Dict[str, List[str]] = {
+    "invoice.yaml": ["請求", "請求書", "御中"],
+}
 
 st.title("AIOCR処理実行")
 
@@ -34,7 +39,7 @@ template_files: List[str] = [
 ]
 template_option = st.selectbox(
     "帳票テンプレートを選択",
-    ["(アップロードを使用)"] + template_files,
+    ["(アップロードを使用)", "自動検出"] + template_files,
 )
 
 uploaded_yaml = st.file_uploader(
@@ -51,8 +56,30 @@ if uploaded_image is not None and (uploaded_yaml is not None or template_option 
             crops_dir = os.path.join(workspace_dir, "crops")
             os.makedirs(crops_dir, exist_ok=True)
 
-            # 3. ROI定義を読み込む
-            if uploaded_yaml is not None:
+            # 3. 画像を読み込み、必要ならテンプレートを自動検出
+            file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
+            image = cv2.imdecode(file_bytes, 1)
+
+            if template_option == "自動検出":
+                st.write("テンプレートを自動検出しています...")
+                text, _ = DummyOCR().run(image)
+                best_template = None
+                best_score = 0
+                for tpl in template_files:
+                    keywords = TEMPLATE_KEYWORDS.get(tpl, [])
+                    score = sum(kw in text for kw in keywords)
+                    if score > best_score:
+                        best_score = score
+                        best_template = tpl
+                if best_template:
+                    st.info(f"自動検出結果: {best_template}")
+                    template_path = os.path.join(templates_dir, best_template)
+                else:
+                    st.warning("テンプレートを特定できなかったため、最初のテンプレートを使用します")
+                    template_path = os.path.join(templates_dir, template_files[0])
+                with open(template_path, "r", encoding="utf-8") as f:
+                    rois = yaml.safe_load(f)
+            elif uploaded_yaml is not None:
                 rois = yaml.safe_load(uploaded_yaml)
             else:
                 template_path = os.path.join(templates_dir, template_option)
@@ -62,9 +89,7 @@ if uploaded_image is not None and (uploaded_yaml is not None or template_option 
             with open(yaml_path, "w", encoding="utf-8") as f:
                 yaml.safe_dump(rois, f, allow_unicode=True)
 
-            # 4. 画像を読み込み、傾き補正を行う
-            file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
-            image = cv2.imdecode(file_bytes, 1)
+            # 4. 傾き補正を行う
             
             st.write("画像の傾きを補正しています...")
             corrected_image = preprocess.correct_skew(image)
