@@ -67,4 +67,4 @@ def test_gpt4o_mini_vision_ocr_mocked(MockOpenAI, sample_text_image):
     # APIが正しい引数で呼び出されたか確認
     mock_client.chat.completions.create.assert_called_once()
     call_args = mock_client.chat.completions.create.call_args
-    assert call_args.kwargs['model'] == "gpt-4o-mini"
+    assert call_args.kwargs['model'] == "gpt-4.1-mini"
