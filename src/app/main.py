@@ -21,7 +21,7 @@ st.title("AIOCR処理実行")
 st.sidebar.title("設定")
 ocr_engine_choice = st.sidebar.selectbox(
     "OCRエンジンを選択",
-    ("DummyOCR", "GPT-4o-mini")
+    ("DummyOCR", "GPT-4.1-mini")
 )
 
 # --- メイン画面 --- 
@@ -106,7 +106,7 @@ if uploaded_image is not None and (uploaded_yaml is not None or template_option 
 
             # 6. 選択されたOCRエンジンで処理を実行
             st.write(f"{ocr_engine_choice} でOCR処理を実行しています...")
-            if ocr_engine_choice == "GPT-4o-mini":
+            if ocr_engine_choice == "GPT-4.1-mini":
                 ocr_engine = GPT4oMiniVisionOCR()
             else:
                 ocr_engine = DummyOCR()
