@@ -5,6 +5,7 @@ import yaml
 import cv2
 import numpy as np
 from datetime import datetime
+from typing import List
 from . import preprocess
 from .ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
 from .ocr_processor import OCRProcessor
@@ -21,10 +22,26 @@ ocr_engine_choice = st.sidebar.selectbox(
 # --- メイン画面 --- 
 
 # 1. ファイルアップローダー
-uploaded_image = st.file_uploader("画像ファイルをアップロードしてください", type=['png', 'jpg', 'jpeg'])
-uploaded_yaml = st.file_uploader("ROI定義ファイル (rois.yaml) をアップロードしてください", type=['yaml', 'yml'])
+uploaded_image = st.file_uploader(
+    "画像ファイルをアップロードしてください", type=["png", "jpg", "jpeg"]
+)
 
-if uploaded_image is not None and uploaded_yaml is not None:
+# テンプレート選択肢を準備
+templates_dir = os.path.join("workspace", "templates")
+os.makedirs(templates_dir, exist_ok=True)
+template_files: List[str] = [
+    f for f in os.listdir(templates_dir) if f.endswith((".yaml", ".yml"))
+]
+template_option = st.selectbox(
+    "帳票テンプレートを選択",
+    ["(アップロードを使用)"] + template_files,
+)
+
+uploaded_yaml = st.file_uploader(
+    "ROI定義ファイル (rois.yaml) をアップロードしてください", type=["yaml", "yml"]
+)
+
+if uploaded_image is not None and (uploaded_yaml is not None or template_option != "(アップロードを使用)"):
     if st.button("OCR処理実行"):
         with st.spinner('AI-OCR処理を実行中です...'):
             # 2. ユニークな作業ディレクトリを作成
@@ -34,8 +51,13 @@ if uploaded_image is not None and uploaded_yaml is not None:
             crops_dir = os.path.join(workspace_dir, "crops")
             os.makedirs(crops_dir, exist_ok=True)
 
-            # 3. アップロードされたrois.yamlを読み込む
-            rois = yaml.safe_load(uploaded_yaml)
+            # 3. ROI定義を読み込む
+            if uploaded_yaml is not None:
+                rois = yaml.safe_load(uploaded_yaml)
+            else:
+                template_path = os.path.join(templates_dir, template_option)
+                with open(template_path, "r", encoding="utf-8") as f:
+                    rois = yaml.safe_load(f)
             yaml_path = os.path.join(workspace_dir, "rois.yaml")
             with open(yaml_path, "w", encoding="utf-8") as f:
                 yaml.safe_dump(rois, f, allow_unicode=True)

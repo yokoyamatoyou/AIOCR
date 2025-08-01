@@ -1,0 +1,6 @@
+zip_code:
+  box: [100, 150, 120, 50]
+  validation_rule: "regex:^\\d{7}$"
+price:
+  box: [100, 250, 200, 50]
+  validation_rule: "regex:^[0-9,]+$"
