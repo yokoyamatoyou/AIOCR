@@ -2,8 +2,7 @@ import os
 import json
 import streamlit as st
 
-from core.db_manager import DBManager
-from core.template_manager import TemplateManager
+from app.cache_utils import get_db_manager, get_template_manager
 
 st.title("レビュー")
 
@@ -17,11 +16,8 @@ def save_correction(item: dict, new_text: str, add_dict: bool) -> None:
     with open(item["extract_path"], "w", encoding="utf-8") as f:
         json.dump(item["data"], f, ensure_ascii=False, indent=4)
 
-    db = DBManager()
-    try:
-        db.update_result_by_text(item["key"], item["text"], new_text)
-    finally:
-        db.close()
+    db = get_db_manager()
+    db.update_result_by_text(item["key"], item["text"], new_text)
     st.info("DBを更新しました")
 
     corrections_path = os.path.join(WORKSPACE_DIR, "corrections.jsonl")
@@ -35,7 +31,7 @@ def save_correction(item: dict, new_text: str, add_dict: bool) -> None:
             with open(template_json, "r", encoding="utf-8") as tf:
                 tdata = json.load(tf)
             template_name = tdata.get("name")
-            tm = TemplateManager()
+            tm = get_template_manager()
             tm.append_correction(template_name, item["text"], new_text)
             st.info("テンプレートを更新しました")
         except Exception:
