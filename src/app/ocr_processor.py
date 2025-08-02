@@ -9,8 +9,15 @@ from . import postprocess
 class OCRProcessor:
     """OCR処理全体を管理するクラス"""
 
-    def __init__(self, ocr_engine: BaseOCR, workspace_dir: str, rois: Optional[Dict[str, Any]] = None):
-        self.ocr_engine = ocr_engine
+    def __init__(
+        self,
+        primary_engine: BaseOCR,
+        workspace_dir: str,
+        validator_engine: Optional[BaseOCR] = None,
+        rois: Optional[Dict[str, Any]] = None,
+    ):
+        self.primary_engine = primary_engine
+        self.validator_engine = validator_engine
         self.workspace_dir = workspace_dir
         self.crops_dir = os.path.join(self.workspace_dir, "crops")
         self.rois = rois or {}
@@ -23,32 +30,62 @@ class OCRProcessor:
         crop_files = sorted(os.listdir(self.crops_dir))
 
         for filename in crop_files:
-            if filename.endswith(".png"):
-                # P1_field_a.png から field_a をキーとして抽出
-                key = "_".join(filename.split("_")[1:]).replace(".png", "")
-                
-                image_path = os.path.join(self.crops_dir, filename)
-                image = cv2.imread(image_path)
+            if not filename.endswith(".png"):
+                continue
 
-                text, confidence = self.ocr_engine.run(image)
+            # P1_field_a.png から field_a をキーとして抽出
+            key = "_".join(filename.split("_")[1:]).replace(".png", "")
 
-                rule = None
-                if key in self.rois:
-                    rule = self.rois[key].get("validation_rule")
+            image_path = os.path.join(self.crops_dir, filename)
+            image = cv2.imread(image_path)
 
-                normalized, needs_human = postprocess.postprocess_result(
-                    text, confidence, rule
+            primary_text, primary_conf = self.primary_engine.run(image)
+            norm_primary = postprocess.normalize_text(primary_text)
+
+            rule = None
+            if key in self.rois:
+                rule = self.rois[key].get("validation_rule")
+
+            norm_secondary = None
+            needs_human = False
+
+            if self.validator_engine is not None:
+                secondary_text, _ = self.validator_engine.run(image)
+                norm_secondary = postprocess.normalize_text(secondary_text)
+
+                if norm_primary == norm_secondary:
+                    confidence = 1.0
+                    confidence_level = "high"
+                else:
+                    valid = postprocess.check_validation(norm_primary, rule)
+                    if valid:
+                        confidence = 0.5
+                        confidence_level = "medium"
+                    else:
+                        confidence = 0.0
+                        confidence_level = "low"
+                    needs_human = True
+            else:
+                # 従来の単一エンジンによる処理
+                norm_primary, needs_human = postprocess.postprocess_result(
+                    primary_text, primary_conf, rule
                 )
+                confidence = primary_conf
+                confidence_level = "high" if not needs_human else "low"
 
-                entry = {
-                    "text": normalized,
-                    "confidence": confidence,
-                    "source_image": filename,
-                }
-                if needs_human:
-                    entry["needs_human"] = True
+            entry = {
+                "text": norm_primary,
+                "confidence": confidence,
+                "source_image": filename,
+                "text_mini": norm_primary,
+                "confidence_level": confidence_level,
+            }
+            if norm_secondary is not None:
+                entry["text_nano"] = norm_secondary
+            if needs_human:
+                entry["needs_human"] = True
 
-                results[key] = entry
+            results[key] = entry
         
         # 結果をextract.jsonに保存
         output_path = os.path.join(self.workspace_dir, "extract.json")

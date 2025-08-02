@@ -34,6 +34,7 @@ class OcrAgent:
         image_name: str,
         template_data: Dict[str, any],
         ocr_engine: BaseOCR,
+        validator_engine: BaseOCR | None = None,
     ) -> Tuple[Dict[str, dict], str]:
         """Process a single document and persist results.
 
@@ -46,7 +47,9 @@ class OcrAgent:
         template_data:
             Loaded template definition containing ROI information.
         ocr_engine:
-            OCR engine implementation used for text extraction.
+            OCR engine implementation used for primary text extraction.
+        validator_engine:
+            Optional secondary OCR engine used for double-checking results.
 
         Returns
         -------
@@ -78,20 +81,23 @@ class OcrAgent:
             cv2.imwrite(str(crops_dir / filename), cropped)
 
         # Execute OCR
-        processor = OCRProcessor(ocr_engine, str(workspace_dir), rois=rois)
+        processor = OCRProcessor(
+            ocr_engine, str(workspace_dir), validator_engine=validator_engine, rois=rois
+        )
         results = processor.process_all()
 
         # Persist to database
         job_id = self.db.create_job(template_data.get("name", ""), now.isoformat())
         for roi_name, info in results.items():
-            status = "needs_human" if info.get("needs_human") else "ok"
             self.db.add_result(
                 job_id,
                 image_name,
                 roi_name,
+                text_mini=info.get("text_mini"),
+                text_nano=info.get("text_nano"),
                 final_text=info["text"],
                 confidence_score=info["confidence"],
-                status=status,
+                status=info.get("confidence_level"),
             )
 
         return results, str(workspace_dir)
