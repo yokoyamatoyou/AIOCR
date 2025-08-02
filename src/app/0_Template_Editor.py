@@ -43,14 +43,21 @@ def main() -> None:
     template_name = st.text_input("テンプレート名", value="" if selection == NEW_TEMPLATE else selection)
 
     existing_rois: Dict[str, Dict[str, List[int]]] = {}
+    existing_keywords: List[str] = []
     if selection != NEW_TEMPLATE:
         try:
             existing = manager.load(selection)
             existing_rois = existing.get("rois", {})
+            existing_keywords = existing.get("keywords", [])
         except FileNotFoundError:
             st.warning("テンプレートが見つかりません。")
 
     uploaded = st.file_uploader("基準画像をアップロード", type=["png", "jpg", "jpeg"])
+
+    keywords_text = st.text_input(
+        "キーワード (カンマ区切り)",
+        value=", ".join(existing_keywords),
+    )
 
     if uploaded is None:
         st.info("画像をアップロードしてください。")
@@ -102,8 +109,12 @@ def main() -> None:
         elif not roi_definitions:
             st.error("ROIを少なくとも1つ描画してください。")
         else:
+            keywords = [
+                kw.strip() for kw in keywords_text.split(",") if kw.strip()
+            ]
             data = {
                 "name": template_name,
+                "keywords": keywords,
                 "rois": roi_definitions,
                 # corrections are stored as a list for forward compatibility
                 "corrections": [],

@@ -1,5 +1,6 @@
 {
   "name": "invoice",
+  "keywords": ["請求", "請求書", "御中"],
   "rois": {
     "zip_code": {
       "box": [100, 150, 120, 50],
