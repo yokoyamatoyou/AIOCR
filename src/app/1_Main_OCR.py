@@ -62,6 +62,7 @@ def main() -> None:
 
     uploaded_images = []
     temp_dir: str | None = None
+    cleanup_dir: str | None = None
     if upload_mode == "画像ファイル":
         uploaded_images = st.file_uploader(
             "画像ファイルをアップロードしてください",
@@ -70,16 +71,26 @@ def main() -> None:
         ) or []
     else:
         uploaded_zip = st.file_uploader(
-            "ZIPアーカイブまたはフォルダをアップロードしてください",
+            "ZIPアーカイブをアップロードしてください",
             type=["zip"],
             accept_multiple_files=False,
         )
-        st.caption("ZIPは一時フォルダに展開され、含まれる画像が順次処理されます")
+        folder_path = st.text_input("またはローカルフォルダパスを入力")
+        st.caption("ZIPやフォルダは一時ディレクトリに展開され、含まれる画像が順次処理されます")
         if uploaded_zip is not None:
             temp_dir = tempfile.mkdtemp()
             zip_bytes = BytesIO(uploaded_zip.read())
             with zipfile.ZipFile(zip_bytes) as zf:
                 zf.extractall(temp_dir)
+            cleanup_dir = temp_dir
+        elif folder_path:
+            if os.path.isdir(folder_path):
+                temp_dir = tempfile.mkdtemp()
+                shutil.copytree(folder_path, temp_dir, dirs_exist_ok=True)
+                cleanup_dir = temp_dir
+            else:
+                st.error("指定されたフォルダが見つかりません")
+        if temp_dir:
             for root, _, files in os.walk(temp_dir):
                 for file in files:
                     if file.lower().endswith((".png", ".jpg", ".jpeg")):
@@ -156,8 +167,8 @@ def main() -> None:
                         workspace_dirs[uploaded_image.name] = workspace_dir
                         progress.progress(idx / total)
             finally:
-                if temp_dir:
-                    shutil.rmtree(temp_dir)
+                if cleanup_dir:
+                    shutil.rmtree(cleanup_dir)
 
             # 処理完了メッセージと結果を表示
             st.success("処理が完了しました！")
