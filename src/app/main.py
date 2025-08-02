@@ -1,4 +1,5 @@
 
+import asyncio
 import streamlit as st
 import os
 import sys
@@ -77,7 +78,7 @@ if uploaded_images and template_names:
 
                 if template_option == "自動検出":
                     st.write(f"{uploaded_image.name} のテンプレートを自動検出しています...")
-                    text, _ = DummyOCR().run(image)
+                    text, _ = asyncio.run(GPT4oNanoVisionOCR().run(image))
                     best_template = None
                     best_score = 0
                     for tpl in template_names:
