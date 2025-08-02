@@ -5,7 +5,6 @@ import zipfile
 import shutil
 from io import BytesIO
 from datetime import datetime
-from typing import Dict, List
 
 import cv2
 import numpy as np
@@ -95,9 +94,6 @@ def main() -> None:
     # テンプレート選択肢を準備
     template_manager = get_template_manager()
     template_names = list_templates()
-    template_keywords: Dict[str, List[str]] = {
-        name: template_manager.get_keywords(name) for name in template_names
-    }
     template_option = st.selectbox(
         "帳票テンプレートを選択",
         ["自動検出"] + template_names,
@@ -135,16 +131,9 @@ def main() -> None:
                         if template_option == "自動検出":
                             st.write(f"{uploaded_image.name} のテンプレートを自動検出しています...")
                             text, _ = asyncio.run(GPT4oNanoVisionOCR().run(image))
-                            best_template = None
-                            best_score = 0
-                            for tpl in template_names:
-                                keywords = template_keywords.get(tpl, [])
-                                score = sum(kw in text for kw in keywords)
-                                if score > best_score:
-                                    best_score = score
-                                    best_template = tpl
-                            if best_template:
-                                template_data = template_manager.load(best_template)
+                            detected = template_manager.detect_template(text)
+                            if detected:
+                                _, template_data = detected
                             else:
                                 st.warning("テンプレートを特定できなかったため、最初のテンプレートを使用します")
                                 template_data = template_manager.load(template_names[0])
