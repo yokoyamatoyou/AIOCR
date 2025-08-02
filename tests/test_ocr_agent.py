@@ -8,7 +8,7 @@ import numpy as np
 from core.db_manager import DBManager
 from core.template_manager import TemplateManager
 from core.ocr_agent import OcrAgent
-from core.ocr_bridge import DummyOCR
+from core.ocr_bridge import DummyOCR, BaseOCR
 
 
 def test_ocr_agent_process_document(tmp_path):
@@ -43,6 +43,34 @@ def test_ocr_agent_process_document(tmp_path):
     with open(Path(workspace) / "extract.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     assert data["field"]["result_id"] == 1
+    db.close()
+
+
+class FaultyOCR(BaseOCR):
+    async def run(self, image: np.ndarray) -> tuple[str, float]:
+        return "m1sread", 0.95
+
+
+def test_ocr_agent_corrections(tmp_path):
+    os.chdir(tmp_path)
+
+    db_path = tmp_path / "ocr.db"
+    db = DBManager(str(db_path))
+    db.initialize()
+
+    templates = TemplateManager(template_dir=str(tmp_path / "templates"))
+    agent = OcrAgent(db=db, templates=templates)
+
+    image = np.zeros((20, 20, 3), dtype=np.uint8)
+    template_data = {
+        "name": "test",
+        "rois": {"field": {"box": [0, 0, 10, 10]}},
+        "corrections": [{"wrong": "1", "correct": "i"}],
+    }
+
+    results, _ = agent.process_document(image, "test.png", template_data, FaultyOCR())
+
+    assert results["field"]["text"] == "misread"
     db.close()
 
 
