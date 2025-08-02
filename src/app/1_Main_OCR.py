@@ -1,6 +1,5 @@
 import asyncio
 import os
-import sys
 import tempfile
 import zipfile
 import shutil
@@ -11,9 +10,6 @@ from typing import Dict, List
 import cv2
 import numpy as np
 import streamlit as st
-
-# Ensure src directory is on the import path when executed directly
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from core.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR, GPT4oNanoVisionOCR
 from app.cache_utils import get_template_manager, get_db_manager, list_templates
