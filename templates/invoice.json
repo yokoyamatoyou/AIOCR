@@ -11,5 +11,5 @@
       "validation_rule": "regex:^[0-9,]+$"
     }
   },
-  "corrections": {}
+  "corrections": []
 }
