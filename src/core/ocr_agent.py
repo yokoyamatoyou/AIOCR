@@ -72,9 +72,19 @@ class OcrAgent:
 
         rois = template_data.get("rois", {})
 
-        # Preprocess image and crop ROIs
+        # Preprocess image and align ROIs
         corrected_image = preprocess.correct_skew(image)
-        for i, (key, roi_info) in enumerate(rois.items()):
+
+        template_path = template_data.get("template_image") or template_data.get(
+            "template_image_path"
+        )
+        if template_path and Path(template_path).exists():
+            template_img = cv2.imread(str(template_path))
+            aligned_rois = preprocess.align_rois(template_img, corrected_image, rois)
+        else:
+            aligned_rois = rois
+
+        for i, (key, roi_info) in enumerate(aligned_rois.items()):
             box = roi_info["box"]
             cropped = preprocess.crop_roi(corrected_image, box)
             filename = f"P{i+1}_{key}.png"
@@ -82,7 +92,10 @@ class OcrAgent:
 
         # Execute OCR
         processor = OCRProcessor(
-            ocr_engine, str(workspace_dir), validator_engine=validator_engine, rois=rois
+            ocr_engine,
+            str(workspace_dir),
+            validator_engine=validator_engine,
+            rois=aligned_rois,
         )
         results = processor.process_all()
 
