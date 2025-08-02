@@ -36,6 +36,7 @@ class OcrAgent:
         template_data: Dict[str, any],
         ocr_engine: BaseOCR,
         validator_engine: BaseOCR | None = None,
+        job_id: int | None = None,
     ) -> Tuple[Dict[str, dict], str]:
         """Process a single document and persist results.
 
@@ -51,6 +52,10 @@ class OcrAgent:
             OCR engine implementation used for primary text extraction.
         validator_engine:
             Optional secondary OCR engine used for double-checking results.
+        job_id:
+            Existing database job identifier. If ``None``, a new job is created
+            per document. When provided, all results are associated with the
+            supplied job, enabling multiple images under a single job.
 
         Returns
         -------
@@ -101,7 +106,8 @@ class OcrAgent:
         results = asyncio.run(processor.process_all())
 
         # Persist to database
-        job_id = self.db.create_job(template_data.get("name", ""), now.isoformat())
+        if job_id is None:
+            job_id = self.db.create_job(template_data.get("name", ""), now.isoformat())
         for roi_name, info in results.items():
             self.db.add_result(
                 job_id,
