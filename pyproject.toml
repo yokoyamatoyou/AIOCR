@@ -4,7 +4,10 @@ name = "aiocr"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
-packages = [{include = "app", from = "src"}]
+packages = [
+    {include = "app", from = "src"},
+    {include = "core", from = "src"},
+]
 
 [tool.poetry.dependencies]
 python = ">=3.9, !=3.9.7"

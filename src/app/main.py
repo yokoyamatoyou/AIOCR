@@ -10,7 +10,7 @@ import numpy as np
 # Ensure src directory is on the import path when executed directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
+from core.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
 from core.template_manager import TemplateManager
 from core.db_manager import DBManager
 from core.ocr_agent import OcrAgent

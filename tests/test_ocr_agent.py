@@ -7,7 +7,7 @@ import numpy as np
 from core.db_manager import DBManager
 from core.template_manager import TemplateManager
 from core.ocr_agent import OcrAgent
-from app.ocr_bridge import DummyOCR
+from core.ocr_bridge import DummyOCR
 
 
 def test_ocr_agent_process_document(tmp_path):

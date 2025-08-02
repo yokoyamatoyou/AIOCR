@@ -9,8 +9,8 @@ from unittest.mock import patch, MagicMock
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from app.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
-from app.core.config import settings
+from core.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
+from core.config import settings
 
 # OpenAI APIキーが設定されているかチェック
 API_KEY_SET = settings.OPENAI_API_KEY not in [None, "", "YOUR_API_KEY_HERE", "ここにあなたのOpenAI APIキーを入力してください"]

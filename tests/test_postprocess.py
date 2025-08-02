@@ -4,7 +4,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from app import postprocess
+from core import postprocess
 
 
 def test_validation_rule_failure():

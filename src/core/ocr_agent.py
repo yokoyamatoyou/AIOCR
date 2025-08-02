@@ -9,9 +9,9 @@ from typing import Dict, Tuple
 import cv2
 import numpy as np
 
-from app import preprocess
-from app.ocr_bridge import BaseOCR
-from app.ocr_processor import OCRProcessor
+from . import preprocess
+from .ocr_bridge import BaseOCR
+from .ocr_processor import OCRProcessor
 
 from .db_manager import DBManager
 from .template_manager import TemplateManager
