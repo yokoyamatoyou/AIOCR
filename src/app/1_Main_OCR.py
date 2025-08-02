@@ -23,6 +23,7 @@ TEMPLATE_KEYWORDS: Dict[str, List[str]] = {
 
 
 def main() -> None:
+    st.set_page_config(page_title="AIOCR")
     st.title("AIOCR処理実行")
 
     # --- サイドバー ---
