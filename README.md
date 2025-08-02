@@ -25,6 +25,14 @@ On Windows you can run `run.bat` which executes the same command.
 This will launch a local web server where you can upload image files, a ZIP archive, or specify a local folder containing images
  and the ROI definition YAML. ZIP archives and folders are copied to a temporary directory and all contained images are processed sequentially.
 
+## Template files
+
+Templates stored in the `templates/` directory describe ROIs and optional
+correction pairs. The `corrections` field is represented as a list of
+`{"wrong": ..., "correct": ...}` dictionaries. Older templates may have
+used a mapping for `corrections`; when such a template is loaded it is
+automatically migrated to the list format.
+
 ## Running tests
 
 Execute all unit tests with:
