@@ -3,7 +3,7 @@ import os
 import cv2
 import json
 import asyncio
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, List
 
 from .ocr_bridge import BaseOCR
 from . import postprocess
@@ -17,12 +17,23 @@ class OCRProcessor:
         workspace_dir: str,
         validator_engine: Optional[BaseOCR] = None,
         rois: Optional[Dict[str, Any]] = None,
+        corrections: Optional[List[Dict[str, str]]] = None,
     ):
         self.primary_engine = primary_engine
         self.validator_engine = validator_engine
         self.workspace_dir = workspace_dir
         self.crops_dir = os.path.join(self.workspace_dir, "crops")
         self.rois = rois or {}
+        self.corrections = corrections or []
+
+    def _apply_corrections(self, text: str) -> str:
+        """Apply known text corrections to a normalized string."""
+        for item in self.corrections:
+            wrong = item.get("wrong")
+            correct = item.get("correct")
+            if wrong and correct:
+                text = text.replace(wrong, correct)
+        return text
 
     async def _process_file(self, filename: str) -> Tuple[str, Dict[str, Any]]:
         key = "_".join(filename.split("_")[1:]).replace(".png", "")
@@ -30,7 +41,9 @@ class OCRProcessor:
         image = cv2.imread(image_path)
 
         primary_text, primary_conf = await self.primary_engine.run(image)
-        norm_primary = postprocess.normalize_text(primary_text)
+        norm_primary = self._apply_corrections(
+            postprocess.normalize_text(primary_text)
+        )
 
         rule = None
         if key in self.rois:
@@ -41,7 +54,9 @@ class OCRProcessor:
 
         if self.validator_engine is not None:
             secondary_text, _ = await self.validator_engine.run(image)
-            norm_secondary = postprocess.normalize_text(secondary_text)
+            norm_secondary = self._apply_corrections(
+                postprocess.normalize_text(secondary_text)
+            )
 
             if norm_primary == norm_secondary:
                 confidence = 1.0
@@ -59,6 +74,7 @@ class OCRProcessor:
             norm_primary, needs_human = postprocess.postprocess_result(
                 primary_text, primary_conf, rule
             )
+            norm_primary = self._apply_corrections(norm_primary)
             confidence = primary_conf
             confidence_level = "high" if not needs_human else "low"
 
