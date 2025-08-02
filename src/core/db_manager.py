@@ -94,18 +94,24 @@ class DBManager:
         rows = cur.fetchall()
         return [dict(r) for r in rows]
 
-    def update_result_by_text(
-        self, result_id: int, roi_name: str, old_text: str, new_text: str
-    ) -> None:
-        """Update a specific result's text using its identifier and previous text."""
+    def update_result(self, result_id: int, new_text: str) -> None:
+        """Update the text of a result and mark it as corrected.
+
+        Parameters
+        ----------
+        result_id:
+            Primary key of the ``ocr_results`` row to update.
+        new_text:
+            Replacement text supplied by the human reviewer.
+        """
         cur = self.conn.cursor()
         cur.execute(
             """
             UPDATE ocr_results
             SET final_text = ?, corrected_by_user = 1
-            WHERE result_id = ? AND roi_name = ? AND final_text = ?
+            WHERE result_id = ?
             """,
-            (new_text, result_id, roi_name, old_text),
+            (new_text, result_id),
         )
         self.conn.commit()
 
