@@ -7,6 +7,7 @@ def test_template_manager_roundtrip(tmp_path):
         "name": "tmp",
         "keywords": ["a", "b"],
         "rois": {"field": {"box": [0, 0, 10, 10]}},
+        "template_image_path": "templates/tmp.png",
     }
     manager.save("sample", data)
 

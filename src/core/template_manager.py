@@ -35,12 +35,16 @@ class TemplateManager:
     def save(self, name: str, data: Dict[str, Any]) -> None:
         """Save template data to a JSON file.
 
-        The ``keywords`` field is normalised to always be present as a list to
-        simplify downstream consumption."""
+        Any additional fields are preserved to allow forward compatible
+        extensions such as ``template_image_path``.  The ``keywords`` field is
+        normalised to always be present as a list to simplify downstream
+        consumption.
+        """
         path = self.template_dir / f"{name}.json"
-        data.setdefault("keywords", [])
+        data_to_save = dict(data)
+        data_to_save.setdefault("keywords", [])
         with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(data_to_save, f, ensure_ascii=False, indent=2)
 
     def get_keywords(self, name: str) -> List[str]:
         """Return the list of detection keywords for a template.

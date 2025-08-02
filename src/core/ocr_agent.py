@@ -81,9 +81,7 @@ class OcrAgent:
         # Preprocess image and align ROIs
         corrected_image = preprocess.correct_skew(image)
 
-        template_path = template_data.get("template_image") or template_data.get(
-            "template_image_path"
-        )
+        template_path = template_data.get("template_image_path")
         if template_path and Path(template_path).exists():
             template_img = cv2.imread(str(template_path))
             aligned_rois = preprocess.align_rois(template_img, corrected_image, rois)

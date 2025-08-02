@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Dict, List
 
+from pathlib import Path
+
 from PIL import Image
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
@@ -112,10 +114,17 @@ def main() -> None:
             keywords = [
                 kw.strip() for kw in keywords_text.split(",") if kw.strip()
             ]
+
+            # save uploaded reference image
+            suffix = Path(uploaded.name).suffix or ".png"
+            image_path = manager.template_dir / f"{template_name}{suffix}"
+            image.save(image_path)
+
             data = {
                 "name": template_name,
                 "keywords": keywords,
                 "rois": roi_definitions,
+                "template_image_path": str(image_path),
                 # corrections are stored as a list for forward compatibility
                 "corrections": [],
             }

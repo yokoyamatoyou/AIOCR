@@ -36,7 +36,7 @@ def test_roi_alignment_with_shift(tmp_path, monkeypatch):
 
     template_data = {
         "name": "test",
-        "template_image": str(template_path),
+        "template_image_path": str(template_path),
         "rois": {"field": {"box": [40, 60, 80, 40]}},
     }
 
