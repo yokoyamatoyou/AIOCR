@@ -64,7 +64,7 @@ class DBManager:
         confidence_score: float | None = None,
         status: str | None = None,
         corrected_by_user: bool = False,
-    ) -> None:
+    ) -> int:
         cur = self.conn.cursor()
         cur.execute(
             """
@@ -86,6 +86,7 @@ class DBManager:
             ),
         )
         self.conn.commit()
+        return int(cur.lastrowid)
 
     def fetch_results(self, job_id: int) -> Iterable[Dict[str, Any]]:
         cur = self.conn.cursor()
