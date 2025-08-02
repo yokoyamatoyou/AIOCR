@@ -10,7 +10,7 @@ import numpy as np
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from app.ocr_bridge import DummyOCR
+from app.ocr_bridge import DummyOCR, BaseOCR
 from app.ocr_processor import OCRProcessor
 
 @pytest.fixture
@@ -58,3 +58,35 @@ def test_process_all(setup_workspace):
     
     assert "field_a" in data
     assert data["field_b"]["source_image"] == "P2_field_b.png"
+
+
+class ZeroOCR(BaseOCR):
+    def run(self, image: np.ndarray) -> tuple[str, float]:
+        return "0000", 0.99
+
+
+class OneOCR(BaseOCR):
+    def run(self, image: np.ndarray) -> tuple[str, float]:
+        return "1111", 0.99
+
+
+def test_double_check_confidence(tmp_path):
+    """二重チェックによる信頼度判定をテスト"""
+
+    workspace_dir = tmp_path / "ws"
+    crops_dir = workspace_dir / "crops"
+    crops_dir.mkdir(parents=True, exist_ok=True)
+
+    img = np.zeros((20, 40, 3), dtype=np.uint8)
+    cv2.imwrite(str(crops_dir / "P1_field_a.png"), img)
+
+    rois = {"field_a": {"validation_rule": "regex:\\d{4}"}}
+
+    processor = OCRProcessor(ZeroOCR(), str(workspace_dir), validator_engine=OneOCR(), rois=rois)
+    results = processor.process_all()
+
+    entry = results["field_a"]
+    assert entry["text_mini"] == "0000"
+    assert entry["text_nano"] == "1111"
+    assert entry["confidence_level"] == "medium"
+    assert entry["needs_human"] is True

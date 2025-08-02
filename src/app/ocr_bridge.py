@@ -61,3 +61,43 @@ class GPT4oMiniVisionOCR(BaseOCR):
         except Exception as e:
             print(f"OpenAI API呼び出し中にエラーが発生しました: {e}")
             return ("エラー", 0.0)
+
+
+class GPT4oNanoVisionOCR(BaseOCR):
+    """GPT-4o nano を利用したOCRエンジン"""
+
+    def __init__(self):
+        self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+
+    def run(self, image: np.ndarray) -> tuple[str, float]:
+        """gpt-4.1-nanoモデルでOCRを実行する。"""
+
+        _, buffer = cv2.imencode(".png", image)
+        base64_image = base64.b64encode(buffer).decode("utf-8")
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4.1-nano",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "この画像に書かれている日本語のテキストを、改行やスペースは無視して、全ての文字を繋げて書き出してください。",
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,{base64_image}"},
+                            },
+                        ],
+                    }
+                ],
+                max_tokens=300,
+            )
+            text = response.choices[0].message.content.strip()
+            confidence = 0.99
+            return text, confidence
+        except Exception as e:
+            print(f"OpenAI API呼び出し中にエラーが発生しました: {e}")
+            return "エラー", 0.0
