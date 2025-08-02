@@ -1,10 +1,13 @@
 
-import pytest
-import os
+import asyncio
 import json
+import os
 import shutil
+import time
+
 import cv2
 import numpy as np
+import pytest
 
 # srcディレクトリをパスに追加
 import sys
@@ -33,40 +36,36 @@ def setup_workspace():
     shutil.rmtree(workspace_dir)
 
 def test_process_all(setup_workspace):
-    """ OCRProcessorが正しくJSONファイルを生成するかテスト """
+    """OCRProcessorが正しくJSONファイルを生成するかテスト"""
     workspace_dir = setup_workspace
-    
-    # ダミーOCRエンジンでプロセッサを初期化
+
     ocr_engine = DummyOCR()
     processor = OCRProcessor(ocr_engine, workspace_dir)
-    
-    # 処理を実行
-    results = processor.process_all()
 
-    # 1. 返り値の検証
+    results = asyncio.run(processor.process_all())
+
     assert "field_a" in results
     assert "field_b" in results
     assert results["field_a"]["text"] == "ダミーテキスト(100x50)"
     assert results["field_b"]["confidence"] == 0.95
 
-    # 2. 生成されたJSONファイルの検証
     json_path = os.path.join(workspace_dir, "extract.json")
     assert os.path.exists(json_path)
 
-    with open(json_path, 'r', encoding='utf-8') as f:
+    with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    
+
     assert "field_a" in data
     assert data["field_b"]["source_image"] == "P2_field_b.png"
 
 
 class ZeroOCR(BaseOCR):
-    def run(self, image: np.ndarray) -> tuple[str, float]:
+    async def run(self, image: np.ndarray) -> tuple[str, float]:
         return "0000", 0.99
 
 
 class OneOCR(BaseOCR):
-    def run(self, image: np.ndarray) -> tuple[str, float]:
+    async def run(self, image: np.ndarray) -> tuple[str, float]:
         return "1111", 0.99
 
 
@@ -83,10 +82,32 @@ def test_double_check_confidence(tmp_path):
     rois = {"field_a": {"validation_rule": "regex:\\d{4}"}}
 
     processor = OCRProcessor(ZeroOCR(), str(workspace_dir), validator_engine=OneOCR(), rois=rois)
-    results = processor.process_all()
+    results = asyncio.run(processor.process_all())
 
     entry = results["field_a"]
     assert entry["text_mini"] == "0000"
     assert entry["text_nano"] == "1111"
     assert entry["confidence_level"] == "medium"
     assert entry["needs_human"] is True
+
+
+class SleepOCR(BaseOCR):
+    async def run(self, image: np.ndarray) -> tuple[str, float]:
+        await asyncio.sleep(0.1)
+        h, w = image.shape[:2]
+        return f"ダミーテキスト({w}x{h})", 0.95
+
+
+def test_process_all_parallel_execution(setup_workspace):
+    """OCR処理が並列に実行されることを確認"""
+    workspace_dir = setup_workspace
+    ocr_engine = SleepOCR()
+    processor = OCRProcessor(ocr_engine, workspace_dir)
+
+    start = time.perf_counter()
+    results = asyncio.run(processor.process_all())
+    elapsed = time.perf_counter() - start
+
+    assert elapsed < 0.18
+    assert results["field_a"]["text"] == "ダミーテキスト(100x50)"
+    assert results["field_b"]["text"] == "ダミーテキスト(120x60)"
