@@ -4,7 +4,7 @@ import numpy as np
 import base64
 import cv2
 import openai
-from .core.config import settings
+from .config import settings
 
 class BaseOCR(ABC):
     """すべてのOCRエンジンのための抽象基底クラス"""

@@ -10,8 +10,8 @@ import numpy as np
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from app.ocr_bridge import DummyOCR, BaseOCR
-from app.ocr_processor import OCRProcessor
+from core.ocr_bridge import DummyOCR, BaseOCR
+from core.ocr_processor import OCRProcessor
 
 @pytest.fixture
 def setup_workspace():

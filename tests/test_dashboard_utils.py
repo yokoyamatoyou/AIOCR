@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-from app.dashboard_utils import compute_metrics
+from core.dashboard_utils import compute_metrics
 
 
 def test_compute_metrics(tmp_path):

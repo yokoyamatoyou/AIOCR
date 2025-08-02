@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from ..dashboard_utils import compute_metrics
+from core.dashboard_utils import compute_metrics
 
 st.title("パフォーマンス・ダッシュボード")
 
