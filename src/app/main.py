@@ -1,11 +1,11 @@
 
 import streamlit as st
 import os
-import yaml
 import cv2
+import json
 import numpy as np
 from datetime import datetime
-from typing import List, Dict
+from typing import Dict, List
 
 import sys
 
@@ -15,10 +15,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app import preprocess
 from app.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR
 from app.ocr_processor import OCRProcessor
+from core.template_manager import TemplateManager
+from core.db_manager import DBManager
 
 # テンプレート名と検出キーワードの対応表
 TEMPLATE_KEYWORDS: Dict[str, List[str]] = {
-    "invoice.yaml": ["請求", "請求書", "御中"],
+    "invoice": ["請求", "請求書", "御中"],
 }
 
 st.title("AIOCR処理実行")
@@ -38,21 +40,14 @@ uploaded_image = st.file_uploader(
 )
 
 # テンプレート選択肢を準備
-templates_dir = os.path.join("workspace", "templates")
-os.makedirs(templates_dir, exist_ok=True)
-template_files: List[str] = [
-    f for f in os.listdir(templates_dir) if f.endswith((".yaml", ".yml"))
-]
+template_manager = TemplateManager()
+template_names = template_manager.list_templates()
 template_option = st.selectbox(
     "帳票テンプレートを選択",
-    ["(アップロードを使用)", "自動検出"] + template_files,
+    ["自動検出"] + template_names,
 )
 
-uploaded_yaml = st.file_uploader(
-    "ROI定義ファイル (rois.yaml) をアップロードしてください", type=["yaml", "yml"]
-)
-
-if uploaded_image is not None and (uploaded_yaml is not None or template_option != "(アップロードを使用)"):
+if uploaded_image is not None and template_names:
     if st.button("OCR処理実行"):
         with st.spinner('AI-OCR処理を実行中です...'):
             # 2. ユニークな作業ディレクトリを作成
@@ -71,7 +66,7 @@ if uploaded_image is not None and (uploaded_yaml is not None or template_option 
                 text, _ = DummyOCR().run(image)
                 best_template = None
                 best_score = 0
-                for tpl in template_files:
+                for tpl in template_names:
                     keywords = TEMPLATE_KEYWORDS.get(tpl, [])
                     score = sum(kw in text for kw in keywords)
                     if score > best_score:
@@ -79,28 +74,26 @@ if uploaded_image is not None and (uploaded_yaml is not None or template_option 
                         best_template = tpl
                 if best_template:
                     st.info(f"自動検出結果: {best_template}")
-                    template_path = os.path.join(templates_dir, best_template)
+                    template_data = template_manager.load(best_template)
                 else:
                     st.warning("テンプレートを特定できなかったため、最初のテンプレートを使用します")
-                    template_path = os.path.join(templates_dir, template_files[0])
-                with open(template_path, "r", encoding="utf-8") as f:
-                    rois = yaml.safe_load(f)
-            elif uploaded_yaml is not None:
-                rois = yaml.safe_load(uploaded_yaml)
+                    template_data = template_manager.load(template_names[0])
             else:
-                template_path = os.path.join(templates_dir, template_option)
-                with open(template_path, "r", encoding="utf-8") as f:
-                    rois = yaml.safe_load(f)
-            yaml_path = os.path.join(workspace_dir, "rois.yaml")
-            with open(yaml_path, "w", encoding="utf-8") as f:
-                yaml.safe_dump(rois, f, allow_unicode=True)
+                template_data = template_manager.load(template_option)
+
+            selected_template = template_data.get("name", template_option)
+            rois = template_data.get("rois", {})
+
+            template_json_path = os.path.join(workspace_dir, "template.json")
+            with open(template_json_path, "w", encoding="utf-8") as f:
+                json.dump(template_data, f, ensure_ascii=False, indent=2)
 
             # 4. 傾き補正を行う
             
             st.write("画像の傾きを補正しています...")
             corrected_image = preprocess.correct_skew(image)
             
-            # 5. YAMLの定義に従ってROIを切り出し、保存
+            # 5. テンプレートの定義に従ってROIを切り出し、保存
             st.write("ROIを切り出しています...")
             for i, (key, roi_info) in enumerate(rois.items()):
                 roi_box = roi_info['box']
@@ -120,9 +113,24 @@ if uploaded_image is not None and (uploaded_yaml is not None or template_option 
             processor = OCRProcessor(ocr_engine, workspace_dir, rois=rois)
             ocr_results = processor.process_all()
 
+            db = DBManager()
+            db.initialize()
+            job_id = db.create_job(selected_template, now.isoformat())
+            for roi_name, info in ocr_results.items():
+                status = "needs_human" if info.get("needs_human") else "ok"
+                db.add_result(
+                    job_id,
+                    uploaded_image.name,
+                    roi_name,
+                    final_text=info["text"],
+                    confidence_score=info["confidence"],
+                    status=status,
+                )
+            db.close()
+
         # 7. 処理完了メッセージと結果を表示
         st.success("処理が完了しました！")
         st.info(f"作業ディレクトリ: {os.path.abspath(workspace_dir)}")
-        
+
         st.subheader("OCR抽出結果 (extract.json)")
         st.json(ocr_results)
