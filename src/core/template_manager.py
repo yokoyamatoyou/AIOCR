@@ -33,10 +33,23 @@ class TemplateManager:
             return json.load(f)
 
     def save(self, name: str, data: Dict[str, Any]) -> None:
-        """Save template data to a JSON file."""
+        """Save template data to a JSON file.
+
+        The ``keywords`` field is normalised to always be present as a list to
+        simplify downstream consumption."""
         path = self.template_dir / f"{name}.json"
+        data.setdefault("keywords", [])
         with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+
+    def get_keywords(self, name: str) -> List[str]:
+        """Return the list of detection keywords for a template.
+
+        If the template does not define any keywords an empty list is
+        returned."""
+        data = self.load(name)
+        keywords = data.get("keywords", [])
+        return keywords if isinstance(keywords, list) else []
 
     def append_correction(self, name: str, wrong: str, correct: str) -> None:
         """Append a correction pair to template's correction list.

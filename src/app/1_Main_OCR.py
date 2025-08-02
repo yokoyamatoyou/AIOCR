@@ -16,10 +16,8 @@ from app.cache_utils import get_template_manager, get_db_manager, list_templates
 from core.ocr_agent import OcrAgent
 
 
-# テンプレート名と検出キーワードの対応表
-TEMPLATE_KEYWORDS: Dict[str, List[str]] = {
-    "invoice": ["請求", "請求書", "御中"],
-}
+# テンプレート名と検出キーワードはテンプレートファイル内で管理
+# TemplateManager を通じて読み込む
 
 
 def main() -> None:
@@ -49,6 +47,9 @@ def main() -> None:
     # テンプレート選択肢を準備
     template_manager = get_template_manager()
     template_names = list_templates()
+    template_keywords: Dict[str, List[str]] = {
+        name: template_manager.get_keywords(name) for name in template_names
+    }
     template_option = st.selectbox(
         "帳票テンプレートを選択",
         ["自動検出"] + template_names,
@@ -88,7 +89,7 @@ def main() -> None:
                         best_template = None
                         best_score = 0
                         for tpl in template_names:
-                            keywords = TEMPLATE_KEYWORDS.get(tpl, [])
+                            keywords = template_keywords.get(tpl, [])
                             score = sum(kw in text for kw in keywords)
                             if score > best_score:
                                 best_score = score
