@@ -1,6 +1,10 @@
 import asyncio
 import os
 import sys
+import tempfile
+import zipfile
+import shutil
+from io import BytesIO
 from datetime import datetime
 from typing import Dict, List
 
@@ -14,6 +18,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from core.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR, GPT4oNanoVisionOCR
 from app.cache_utils import get_template_manager, get_db_manager, list_templates
 from core.ocr_agent import OcrAgent
+
+
+class LocalUploadedFile:
+    """Simple wrapper to mimic Streamlit's UploadedFile for local files."""
+
+    def __init__(self, path: str):
+        self._path = path
+        self.name = os.path.basename(path)
+
+    def read(self) -> bytes:
+        with open(self._path, "rb") as f:
+            return f.read()
 
 
 # テンプレート名と検出キーワードはテンプレートファイル内で管理
@@ -37,12 +53,37 @@ def main() -> None:
 
     # --- メイン画面 ---
 
-    # 1. ファイルアップローダー
-    uploaded_images = st.file_uploader(
-        "画像ファイルをアップロードしてください",
-        type=["png", "jpg", "jpeg"],
-        accept_multiple_files=True,
+    # 1. アップロード形式の選択
+    upload_mode = st.radio(
+        "アップロード形式",
+        ("画像ファイル", "ZIP/フォルダ"),
+        horizontal=True,
     )
+
+    uploaded_images = []
+    temp_dir: str | None = None
+    if upload_mode == "画像ファイル":
+        uploaded_images = st.file_uploader(
+            "画像ファイルをアップロードしてください",
+            type=["png", "jpg", "jpeg"],
+            accept_multiple_files=True,
+        ) or []
+    else:
+        uploaded_zip = st.file_uploader(
+            "ZIPアーカイブまたはフォルダをアップロードしてください",
+            type=["zip"],
+            accept_multiple_files=False,
+        )
+        st.caption("ZIPは一時フォルダに展開され、含まれる画像が順次処理されます")
+        if uploaded_zip is not None:
+            temp_dir = tempfile.mkdtemp()
+            zip_bytes = BytesIO(uploaded_zip.read())
+            with zipfile.ZipFile(zip_bytes) as zf:
+                zf.extractall(temp_dir)
+            for root, _, files in os.walk(temp_dir):
+                for file in files:
+                    if file.lower().endswith((".png", ".jpg", ".jpeg")):
+                        uploaded_images.append(LocalUploadedFile(os.path.join(root, file)))
 
     # テンプレート選択肢を準備
     template_manager = get_template_manager()
@@ -74,45 +115,49 @@ def main() -> None:
             progress = st.progress(0)
             total = len(uploaded_images)
 
-            with st.spinner('AI-OCR処理を実行中です (GPT-4.1-nanoでダブルチェック)...'):
-                static_template = None
-                if template_option != "自動検出":
-                    static_template = template_manager.load(template_option)
+            try:
+                with st.spinner('AI-OCR処理を実行中です (GPT-4.1-nanoでダブルチェック)...'):
+                    static_template = None
+                    if template_option != "自動検出":
+                        static_template = template_manager.load(template_option)
 
-                for idx, uploaded_image in enumerate(uploaded_images, start=1):
-                    file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
-                    image = cv2.imdecode(file_bytes, 1)
+                    for idx, uploaded_image in enumerate(uploaded_images, start=1):
+                        file_bytes = np.asarray(bytearray(uploaded_image.read()), dtype=np.uint8)
+                        image = cv2.imdecode(file_bytes, 1)
 
-                    if template_option == "自動検出":
-                        st.write(f"{uploaded_image.name} のテンプレートを自動検出しています...")
-                        text, _ = asyncio.run(GPT4oNanoVisionOCR().run(image))
-                        best_template = None
-                        best_score = 0
-                        for tpl in template_names:
-                            keywords = template_keywords.get(tpl, [])
-                            score = sum(kw in text for kw in keywords)
-                            if score > best_score:
-                                best_score = score
-                                best_template = tpl
-                        if best_template:
-                            template_data = template_manager.load(best_template)
+                        if template_option == "自動検出":
+                            st.write(f"{uploaded_image.name} のテンプレートを自動検出しています...")
+                            text, _ = asyncio.run(GPT4oNanoVisionOCR().run(image))
+                            best_template = None
+                            best_score = 0
+                            for tpl in template_names:
+                                keywords = template_keywords.get(tpl, [])
+                                score = sum(kw in text for kw in keywords)
+                                if score > best_score:
+                                    best_score = score
+                                    best_template = tpl
+                            if best_template:
+                                template_data = template_manager.load(best_template)
+                            else:
+                                st.warning("テンプレートを特定できなかったため、最初のテンプレートを使用します")
+                                template_data = template_manager.load(template_names[0])
                         else:
-                            st.warning("テンプレートを特定できなかったため、最初のテンプレートを使用します")
-                            template_data = template_manager.load(template_names[0])
-                    else:
-                        template_data = static_template
+                            template_data = static_template
 
-                    ocr_results, workspace_dir = agent.process_document(
-                        image,
-                        uploaded_image.name,
-                        template_data,
-                        ocr_engine,
-                        validator_engine=nano_engine,
-                        job_id=job_id,
-                    )
-                    combined_results[uploaded_image.name] = ocr_results
-                    workspace_dirs[uploaded_image.name] = workspace_dir
-                    progress.progress(idx / total)
+                        ocr_results, workspace_dir = agent.process_document(
+                            image,
+                            uploaded_image.name,
+                            template_data,
+                            ocr_engine,
+                            validator_engine=nano_engine,
+                            job_id=job_id,
+                        )
+                        combined_results[uploaded_image.name] = ocr_results
+                        workspace_dirs[uploaded_image.name] = workspace_dir
+                        progress.progress(idx / total)
+            finally:
+                if temp_dir:
+                    shutil.rmtree(temp_dir)
 
             # 処理完了メッセージと結果を表示
             st.success("処理が完了しました！")

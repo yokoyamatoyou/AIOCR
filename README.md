@@ -22,7 +22,7 @@ streamlit run src/app/main.py
 ```
 On Windows you can run `run.bat` which executes the same command.
 
-This will launch a local web server where you can upload an image and a YAML file that defines the ROIs.
+This will launch a local web server where you can upload image files or a ZIP archive/folder containing images along with a YAML file that defines the ROIs. ZIP archives are extracted to a temporary directory and all contained images are processed sequentially.
 
 ## Running tests
 
