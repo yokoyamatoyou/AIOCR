@@ -37,3 +37,11 @@ class TemplateManager:
         path = self.template_dir / f"{name}.json"
         with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+
+    # new method to append corrections
+    def append_correction(self, name: str, wrong: str, correct: str) -> None:
+        """Append a correction pair to template's correction dictionary."""
+        data = self.load(name)
+        corrections = data.setdefault("corrections", {})
+        corrections[wrong] = correct
+        self.save(name, data)
