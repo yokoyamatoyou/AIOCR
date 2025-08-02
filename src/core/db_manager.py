@@ -93,16 +93,18 @@ class DBManager:
         rows = cur.fetchall()
         return [dict(r) for r in rows]
 
-    def update_result_by_text(self, roi_name: str, old_text: str, new_text: str) -> None:
-        """Update final_text and corrected flag for a given ROI using previous text."""
+    def update_result_by_text(
+        self, result_id: int, roi_name: str, old_text: str, new_text: str
+    ) -> None:
+        """Update a specific result's text using its identifier and previous text."""
         cur = self.conn.cursor()
         cur.execute(
             """
             UPDATE ocr_results
             SET final_text = ?, corrected_by_user = 1
-            WHERE roi_name = ? AND final_text = ?
+            WHERE result_id = ? AND roi_name = ? AND final_text = ?
             """,
-            (new_text, roi_name, old_text),
+            (new_text, result_id, roi_name, old_text),
         )
         self.conn.commit()
 

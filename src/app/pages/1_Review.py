@@ -17,7 +17,7 @@ def save_correction(item: dict, new_text: str, add_dict: bool) -> None:
         json.dump(item["data"], f, ensure_ascii=False, indent=4)
 
     db = get_db_manager()
-    db.update_result_by_text(item["key"], item["text"], new_text)
+    db.update_result_by_text(item["result_id"], item["key"], item["text"], new_text)
     st.info("DBを更新しました")
 
     corrections_path = os.path.join(WORKSPACE_DIR, "corrections.jsonl")
@@ -64,6 +64,7 @@ def load_review_items():
                     "extract_path": extract_path,
                     "crops_dir": crops_dir,
                     "data": data,
+                    "result_id": info.get("result_id"),
                 }
                 items.append(item)
     return items

@@ -23,7 +23,7 @@ def test_save_correction_updates_db_and_template(tmp_path):
     crops = workspace_doc / 'crops'
     crops.mkdir(parents=True, exist_ok=True)
     extract = workspace_doc / 'extract.json'
-    data = {'field': {'text': 'OLD', 'needs_human': True, 'source_image': 'P1_field.png'}}
+    data = {'field': {'text': 'OLD', 'needs_human': True, 'source_image': 'P1_field.png', 'result_id': 1}}
     with open(extract, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False)
     with open(workspace_doc / 'template.json', 'w', encoding='utf-8') as f:
@@ -52,6 +52,7 @@ def test_save_correction_updates_db_and_template(tmp_path):
         'extract_path': str(extract),
         'crops_dir': str(crops),
         'data': data,
+        'result_id': 1,
     }
 
     review = load_review_module()
