@@ -20,8 +20,21 @@ class TemplateManager:
         """Return a list of available template names."""
         return [p.stem for p in self.template_dir.glob("*.json")]
 
+    def _normalise(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Return template data with a consistent structure."""
+        keywords = data.get("keywords", [])
+        data["keywords"] = keywords if isinstance(keywords, list) else []
+
+        corrections = data.get("corrections", [])
+        if isinstance(corrections, dict):
+            corrections = [{"wrong": k, "correct": v} for k, v in corrections.items()]
+        elif not isinstance(corrections, list):
+            corrections = []
+        data["corrections"] = corrections
+        return data
+
     def load(self, name: str) -> Dict[str, Any]:
-        """Load a template by name.
+        """Load a template by name and normalise its structure.
 
         Parameters
         ----------
@@ -30,7 +43,8 @@ class TemplateManager:
         """
         path = self.template_dir / f"{name}.json"
         with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+        return self._normalise(data)
 
     def save(self, name: str, data: Dict[str, Any]) -> None:
         """Save template data to a JSON file.
@@ -41,8 +55,7 @@ class TemplateManager:
         consumption.
         """
         path = self.template_dir / f"{name}.json"
-        data_to_save = dict(data)
-        data_to_save.setdefault("keywords", [])
+        data_to_save = self._normalise(dict(data))
         with path.open("w", encoding="utf-8") as f:
             json.dump(data_to_save, f, ensure_ascii=False, indent=2)
 
@@ -99,12 +112,6 @@ class TemplateManager:
         dictionaries.
         """
         data = self.load(name)
-        corrections = data.setdefault("corrections", [])
-        if not isinstance(corrections, list):
-            # migrate legacy dict-based structure
-            corrections = [
-                {"wrong": k, "correct": v} for k, v in corrections.items()
-            ]
-        corrections.append({"wrong": wrong, "correct": correct})
-        data["corrections"] = corrections
+        data.setdefault("corrections", [])
+        data["corrections"].append({"wrong": wrong, "correct": correct})
         self.save(name, data)
