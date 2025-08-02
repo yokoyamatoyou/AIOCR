@@ -68,6 +68,11 @@ class GPT4oMiniVisionOCR(BaseOCR):
                     headers=headers,
                     json=payload,
                 ) as resp:
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        raise RuntimeError(
+                            f"OpenAI API request failed ({resp.status}): {error_text}"
+                        )
                     data = await resp.json()
             text = data["choices"][0]["message"]["content"].strip()
             confidence = 0.99
@@ -115,6 +120,11 @@ class GPT4oNanoVisionOCR(BaseOCR):
                     headers=headers,
                     json=payload,
                 ) as resp:
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        raise RuntimeError(
+                            f"OpenAI API request failed ({resp.status}): {error_text}"
+                        )
                     data = await resp.json()
             text = data["choices"][0]["message"]["content"].strip()
             confidence = 0.99

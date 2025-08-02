@@ -47,6 +47,8 @@ def test_gpt4o_mini_vision_ocr_integration(sample_text_image):
     assert confidence > 0.0
 
 class MockResponse:
+    status = 200
+
     async def __aenter__(self):
         return self
 
@@ -55,6 +57,9 @@ class MockResponse:
 
     async def json(self):
         return {"choices": [{"message": {"content": "モックされたOCR結果"}}]}
+
+    async def text(self):
+        return ""
 
 
 @patch("aiohttp.ClientSession.post", return_value=MockResponse())
