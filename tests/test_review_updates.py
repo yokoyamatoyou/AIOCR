@@ -70,6 +70,7 @@ def test_save_correction_updates_db_and_template(tmp_path):
     db2.close()
     assert results[0]['final_text'] == 'NEW'
     assert results[0]['corrected_by_user'] == 1
+    assert results[0]['status'] == 'confirmed'
 
     # template corrections updated
     with open(templates_dir / 'invoice.json', 'r', encoding='utf-8') as f:

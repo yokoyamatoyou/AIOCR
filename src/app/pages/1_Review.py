@@ -17,7 +17,9 @@ def save_correction(item: dict, new_text: str, add_dict: bool) -> None:
         json.dump(item["data"], f, ensure_ascii=False, indent=4)
 
     db = get_db_manager()
-    db.update_result(item["result_id"], new_text)
+    # Mark the entry as confirmed in the database as the reviewer approved
+    # the corrected text.
+    db.update_result(item["result_id"], new_text, status="confirmed")
     st.info("DBを更新しました")
 
     corrections_path = os.path.join(WORKSPACE_DIR, "corrections.jsonl")
