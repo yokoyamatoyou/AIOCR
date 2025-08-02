@@ -102,7 +102,7 @@ def main() -> None:
         elif not roi_definitions:
             st.error("ROIを少なくとも1つ描画してください。")
         else:
-            data = {"name": template_name, "rois": roi_definitions, "corrections": {}}
+            data = {"name": template_name, "rois": roi_definitions, "corrections": []}
             manager.save(template_name, data)
             list_templates.clear()
             st.success("テンプレートを保存しました。")
