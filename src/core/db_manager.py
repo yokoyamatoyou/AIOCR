@@ -94,7 +94,7 @@ class DBManager:
         rows = cur.fetchall()
         return [dict(r) for r in rows]
 
-    def update_result(self, result_id: int, new_text: str) -> None:
+    def update_result(self, result_id: int, new_text: str, status: str = "confirmed") -> None:
         """Update the text of a result and mark it as corrected.
 
         Parameters
@@ -103,15 +103,18 @@ class DBManager:
             Primary key of the ``ocr_results`` row to update.
         new_text:
             Replacement text supplied by the human reviewer.
+        status:
+            Optional new status for the result.  Defaults to ``"confirmed"``
+            to indicate that the human reviewer has verified the value.
         """
         cur = self.conn.cursor()
         cur.execute(
             """
             UPDATE ocr_results
-            SET final_text = ?, corrected_by_user = 1
+            SET final_text = ?, corrected_by_user = 1, status = ?
             WHERE result_id = ?
             """,
-            (new_text, result_id),
+            (new_text, status, result_id),
         )
         self.conn.commit()
 

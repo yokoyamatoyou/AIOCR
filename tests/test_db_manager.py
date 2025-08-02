@@ -14,5 +14,7 @@ def test_db_manager(tmp_path):
     assert len(results) == 1
     assert results[0]["final_text"] == "NEW"
     assert results[0]["corrected_by_user"] == 1
+    # default status should be set to "confirmed" when updating
+    assert results[0]["status"] == "confirmed"
 
     db.close()
