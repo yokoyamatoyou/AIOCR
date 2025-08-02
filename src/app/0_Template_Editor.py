@@ -8,7 +8,7 @@ from PIL import Image
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 
-from core.template_manager import TemplateManager
+from app.cache_utils import get_template_manager, list_templates
 
 
 NEW_TEMPLATE = "新規作成"
@@ -36,8 +36,8 @@ def _load_initial_drawing(rois: Dict[str, Dict[str, List[int]]]) -> Dict[str, Li
 def main() -> None:
     st.title("Template Editor")
 
-    manager = TemplateManager()
-    templates = manager.list_templates()
+    manager = get_template_manager()
+    templates = list_templates()
 
     selection = st.selectbox("テンプレートを選択", [NEW_TEMPLATE] + templates)
     template_name = st.text_input("テンプレート名", value="" if selection == NEW_TEMPLATE else selection)
@@ -104,6 +104,7 @@ def main() -> None:
         else:
             data = {"name": template_name, "rois": roi_definitions, "corrections": {}}
             manager.save(template_name, data)
+            list_templates.clear()
             st.success("テンプレートを保存しました。")
 
 

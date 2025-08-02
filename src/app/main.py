@@ -12,8 +12,8 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from core.ocr_bridge import DummyOCR, GPT4oMiniVisionOCR, GPT4oNanoVisionOCR
-from core.template_manager import TemplateManager
-from core.db_manager import DBManager
+# Caching helpers
+from app.cache_utils import get_template_manager, get_db_manager, list_templates
 from core.ocr_agent import OcrAgent
 
 # テンプレート名と検出キーワードの対応表
@@ -40,8 +40,8 @@ uploaded_images = st.file_uploader(
 )
 
 # テンプレート選択肢を準備
-template_manager = TemplateManager()
-template_names = template_manager.list_templates()
+template_manager = get_template_manager()
+template_names = list_templates()
 template_option = st.selectbox(
     "帳票テンプレートを選択",
     ["自動検出"] + template_names,
@@ -49,8 +49,7 @@ template_option = st.selectbox(
 
 if uploaded_images and template_names:
     if st.button("OCR処理実行"):
-        db = DBManager()
-        db.initialize()
+        db = get_db_manager()
         job_id = db.create_job(template_option, datetime.now().isoformat())
         agent = OcrAgent(db=db, templates=template_manager)
 
@@ -106,8 +105,6 @@ if uploaded_images and template_names:
                 combined_results[uploaded_image.name] = ocr_results
                 workspace_dirs[uploaded_image.name] = workspace_dir
                 progress.progress(idx / total)
-
-        db.close()
 
         # 処理完了メッセージと結果を表示
         st.success("処理が完了しました！")

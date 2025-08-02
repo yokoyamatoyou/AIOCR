@@ -2,10 +2,16 @@ import streamlit as st
 import pandas as pd
 from core.dashboard_utils import compute_metrics
 
+
+@st.cache_data
+def load_metrics():
+    """Compute and cache dashboard metrics."""
+    return compute_metrics("workspace")
+
 st.title("パフォーマンス・ダッシュボード")
 
 if 'metrics' not in st.session_state or st.button("更新"):
-    st.session_state['metrics'] = compute_metrics("workspace")
+    st.session_state['metrics'] = load_metrics()
 
 total_docs, total_fields, auto_rate, daily_df = st.session_state['metrics']
 
