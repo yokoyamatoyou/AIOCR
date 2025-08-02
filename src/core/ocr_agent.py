@@ -1,6 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
+import json
+from pathlib import Path
+from typing import Dict, Tuple
+
+import cv2
+import numpy as np
+
+from app import preprocess
+from app.ocr_bridge import BaseOCR
+from app.ocr_processor import OCRProcessor
 
 from .db_manager import DBManager
 from .template_manager import TemplateManager
@@ -8,11 +19,79 @@ from .template_manager import TemplateManager
 
 @dataclass
 class OcrAgent:
-    """Placeholder for core OCR processing logic.
+    """Core class orchestrating the OCR workflow.
 
-    This class will orchestrate the OCR workflow using the database and
-    template managers implemented in Phase 1.
+    The agent ties together template handling, preprocessing, OCR execution
+    and database persistence into a single entry point.
     """
 
     db: DBManager
     templates: TemplateManager
+
+    def process_document(
+        self,
+        image: np.ndarray,
+        image_name: str,
+        template_data: Dict[str, any],
+        ocr_engine: BaseOCR,
+    ) -> Tuple[Dict[str, dict], str]:
+        """Process a single document and persist results.
+
+        Parameters
+        ----------
+        image:
+            Source image as a ``numpy.ndarray``.
+        image_name:
+            Original filename of the uploaded image.
+        template_data:
+            Loaded template definition containing ROI information.
+        ocr_engine:
+            OCR engine implementation used for text extraction.
+
+        Returns
+        -------
+        results: dict
+            OCR results keyed by ROI name.
+        workspace_dir: str
+            Path to the workspace directory used for intermediate files.
+        """
+
+        now = datetime.now()
+        doc_id = f"DOC_{now.strftime('%Y%m%d_%H%M%S')}"
+        workspace_dir = Path("workspace") / doc_id
+        crops_dir = workspace_dir / "crops"
+        workspace_dir.mkdir(parents=True, exist_ok=True)
+        crops_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save template for traceability
+        with (workspace_dir / "template.json").open("w", encoding="utf-8") as f:
+            json.dump(template_data, f, ensure_ascii=False, indent=2)
+
+        rois = template_data.get("rois", {})
+
+        # Preprocess image and crop ROIs
+        corrected_image = preprocess.correct_skew(image)
+        for i, (key, roi_info) in enumerate(rois.items()):
+            box = roi_info["box"]
+            cropped = preprocess.crop_roi(corrected_image, box)
+            filename = f"P{i+1}_{key}.png"
+            cv2.imwrite(str(crops_dir / filename), cropped)
+
+        # Execute OCR
+        processor = OCRProcessor(ocr_engine, str(workspace_dir), rois=rois)
+        results = processor.process_all()
+
+        # Persist to database
+        job_id = self.db.create_job(template_data.get("name", ""), now.isoformat())
+        for roi_name, info in results.items():
+            status = "needs_human" if info.get("needs_human") else "ok"
+            self.db.add_result(
+                job_id,
+                image_name,
+                roi_name,
+                final_text=info["text"],
+                confidence_score=info["confidence"],
+                status=status,
+            )
+
+        return results, str(workspace_dir)
