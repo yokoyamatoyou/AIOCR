@@ -55,6 +55,40 @@ class TemplateManager:
         keywords = data.get("keywords", [])
         return keywords if isinstance(keywords, list) else []
 
+
+    def detect_template(self, text: str) -> tuple[str, Dict[str, Any]] | None:
+        """Select the best template for ``text`` based on keyword matches.
+
+        Parameters
+        ----------
+        text:
+            OCR'd text used to determine which template is most appropriate.
+
+        Returns
+        -------
+        tuple or ``None``
+            A tuple of ``(template_name, template_data)`` for the best match.
+            ``None`` is returned when no template contains any of the
+            configured keywords.
+        """
+        best_score = 0
+        best_name: str | None = None
+        best_data: Dict[str, Any] | None = None
+        for name in self.list_templates():
+            data = self.load(name)
+            keywords = data.get("keywords", [])
+            if isinstance(keywords, list):
+                score = sum(kw in text for kw in keywords)
+            else:
+                score = 0
+            if score > best_score:
+                best_score = score
+                best_name = name
+                best_data = data
+        if best_name is None:
+            return None
+        return best_name, best_data
+
     def append_correction(self, name: str, wrong: str, correct: str) -> None:
         """Append a correction pair to template's correction list.
 
