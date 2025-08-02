@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 from typing import Dict, Tuple
+import asyncio
 
 import cv2
 import numpy as np
@@ -97,7 +98,7 @@ class OcrAgent:
             validator_engine=validator_engine,
             rois=aligned_rois,
         )
-        results = processor.process_all()
+        results = asyncio.run(processor.process_all())
 
         # Persist to database
         job_id = self.db.create_job(template_data.get("name", ""), now.isoformat())
