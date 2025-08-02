@@ -109,7 +109,7 @@ class OcrAgent:
         if job_id is None:
             job_id = self.db.create_job(template_data.get("name", ""), now.isoformat())
         for roi_name, info in results.items():
-            self.db.add_result(
+            result_id = self.db.add_result(
                 job_id,
                 image_name,
                 roi_name,
@@ -119,5 +119,11 @@ class OcrAgent:
                 confidence_score=info["confidence"],
                 status=info.get("confidence_level"),
             )
+            info["result_id"] = result_id
+
+        # Overwrite extract.json with result IDs included
+        extract_path = workspace_dir / "extract.json"
+        with extract_path.open("w", encoding="utf-8") as f:
+            json.dump(results, f, ensure_ascii=False, indent=4)
 
         return results, str(workspace_dir)

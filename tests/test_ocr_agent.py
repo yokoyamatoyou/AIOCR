@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import json
 
 import cv2
 import numpy as np
@@ -31,6 +32,7 @@ def test_ocr_agent_process_document(tmp_path):
     )
 
     assert "field" in results
+    assert results["field"]["result_id"] == 1
     assert Path(workspace).exists()
     db_results = db.fetch_results(1)
     assert db_results[0]["roi_name"] == "field"
@@ -38,6 +40,9 @@ def test_ocr_agent_process_document(tmp_path):
     assert db_results[0]["text_nano"] == "ダミーテキスト(10x10)"
     assert db_results[0]["confidence_score"] == 1.0
     assert db_results[0]["status"] == "high"
+    with open(Path(workspace) / "extract.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["field"]["result_id"] == 1
     db.close()
 
 
@@ -68,4 +73,5 @@ def test_ocr_agent_multiple_images_single_job(tmp_path):
     db_results = db.fetch_results(job_id)
     assert len(db_results) == 2
     assert {r["image_name"] for r in db_results} == {"a.png", "b.png"}
+    assert {r["result_id"] for r in db_results} == {1, 2}
     db.close()
