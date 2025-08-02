@@ -33,7 +33,7 @@ def test_save_correction_updates_db_and_template(tmp_path):
     templates_dir = tmp_path / 'templates'
     templates_dir.mkdir()
     with open(templates_dir / 'invoice.json', 'w', encoding='utf-8') as f:
-        json.dump({'name': 'invoice', 'rois': {}, 'corrections': {}}, f, ensure_ascii=False)
+        json.dump({'name': 'invoice', 'rois': {}, 'corrections': []}, f, ensure_ascii=False)
 
     # database
     db_dir = tmp_path / 'database'
@@ -73,4 +73,4 @@ def test_save_correction_updates_db_and_template(tmp_path):
     # template corrections updated
     with open(templates_dir / 'invoice.json', 'r', encoding='utf-8') as f:
         tpl = json.load(f)
-    assert tpl['corrections']['OLD'] == 'NEW'
+    assert {"wrong": "OLD", "correct": "NEW"} in tpl['corrections']

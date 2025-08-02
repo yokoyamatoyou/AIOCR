@@ -38,10 +38,22 @@ class TemplateManager:
         with path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-    # new method to append corrections
     def append_correction(self, name: str, wrong: str, correct: str) -> None:
-        """Append a correction pair to template's correction dictionary."""
+        """Append a correction pair to template's correction list.
+
+        The previous implementation stored corrections in a mapping which
+        overwrote existing entries when the same ``wrong`` text appeared
+        multiple times.  To preserve the full history of human feedback,
+        corrections are now recorded as a list of ``{"wrong": ..., "correct": ...}``
+        dictionaries.
+        """
         data = self.load(name)
-        corrections = data.setdefault("corrections", {})
-        corrections[wrong] = correct
+        corrections = data.setdefault("corrections", [])
+        if not isinstance(corrections, list):
+            # migrate legacy dict-based structure
+            corrections = [
+                {"wrong": k, "correct": v} for k, v in corrections.items()
+            ]
+        corrections.append({"wrong": wrong, "correct": correct})
+        data["corrections"] = corrections
         self.save(name, data)
