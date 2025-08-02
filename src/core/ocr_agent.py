@@ -95,11 +95,13 @@ class OcrAgent:
             cv2.imwrite(str(crops_dir / filename), cropped)
 
         # Execute OCR
+        corrections = template_data.get("corrections", [])
         processor = OCRProcessor(
             ocr_engine,
             str(workspace_dir),
             validator_engine=validator_engine,
             rois=aligned_rois,
+            corrections=corrections,
         )
         results = asyncio.run(processor.process_all())
 
